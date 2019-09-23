@@ -1,13 +1,16 @@
 # load the mlr package
+#install.packages('mlr')
+#install.packages("clue")
+
 library(mlr)
 library(clue)
 
-inputFileName = "IRIS.csv"
-outputFileName = "clustering.csv"
+input.file.name = "iris.csv"
+output.file.name = "clustering.csv"
 k=3
 
 # the first row is the identification row
-data = read.csv(inputFileName) 
+data = read.csv(input.file.name) 
 
 # load data
 feature.count = ncol(data)
@@ -30,4 +33,4 @@ result = cbind(ids, labels)
 result
 
 #save to file
-write.csv(x = result ,file = outputFileName, row.names = FALSE, quote = FALSE)
+write.csv(x = result ,file = output.file.name, row.names = FALSE, quote = FALSE)
