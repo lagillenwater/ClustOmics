@@ -1,3 +1,6 @@
+#install.packages("subspace")
+library(subspace)
+
 inputFileName = "iris.csv"
 outputFileName = "clustering.csv"
 k = 3 # number of clusters
@@ -14,11 +17,16 @@ values = data[2:feature.count]
 # clustering
 temp.clustering = ProClus(values, k, d)
 
-label = 1 
-for (cluster in clustering)
+result = data.frame(matrix(ncol = 2, nrow = 0))
+
+
+for (cluster.id in (1:length(temp.clustering)))
 {
-  ids = cluster$objects
-  labels =  rep(c(label), times = length(ids))
-  clustering = cbind(ids, label)
-  ids = ids + 1
+  sids = temp.clustering[[cluster.id]][["objects"]]
+  labels = rep(cluster.id, length(sids))
+  cluster = cbind(sids, labels)
+  result = rbind(result, cluster)
 }
+
+#save to file
+write.csv(x = result ,file = outputFileName, row.names = FALSE, quote = FALSE)
