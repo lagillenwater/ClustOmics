@@ -30,9 +30,10 @@ autoencoder <- function(df, layer_sizes = c(128, 64, 16),
                             name = sprintf("Encoder_%d", encoder_no))
       encoder_no <- encoder_no + 1
     }
+    
     # Define decoder layers
+    decoder_no <- length(layer_sizes)
     for (size in rev(layer_sizes[(1:length(layer_sizes) - 1)])){
-      decoder_no <- length(layer_sizes)
       model %>% layer_dense(units = size, activation = "linear", 
                             name = sprintf("Decoder_%d", decoder_no))
       decoder_no <- decoder_no - 1
@@ -50,6 +51,7 @@ autoencoder <- function(df, layer_sizes = c(128, 64, 16),
     metrics = "mse"
   )
   
+  name_temp <- row.names(df)
   X = as.matrix(df)
   
   # Pretrain model layers
@@ -97,5 +99,11 @@ autoencoder <- function(df, layer_sizes = c(128, 64, 16),
   )
   
   plot(history)
+  
+  embeddings <- model %>% predict(X)
+  
+  out_df <- as.data.frame(embeddings)
+  row.names(out_df) <- name_temp
+  return(out_df)
 }
 
