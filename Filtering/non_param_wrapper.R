@@ -4,9 +4,6 @@
 # pheno_tbl - phenotype data including only variables of interest.  ### Add info about data organization and example. 
 # fdr = fdr q value threshold for determining significance. Default is 1e-5. #### Define why this value was chosen. 
 
-
-
-
 non_param_wrapper <- function(dat, pheno_tbl, fdr = 1e-5){
 
    # Natural logarithm for skewed clinical data.
