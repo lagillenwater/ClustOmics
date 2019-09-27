@@ -15,9 +15,10 @@ autoencoder <- function(df, layer_sizes = c(128, 64, 16),
                         pretrain_epochs = 100, finetune_epochs = 200,
                         pretrain_lr = 0.01, finetune_lr = 0.00001,
                         batch_size = 100, validation_split = 0.2){
-  # Define model, freeze all but end layers
+  # Define model
   model <- keras_model_sequential()
   lrelu <- layer_activation_leaky_relu()
+  
   # Define encoder layers
   model %>% layer_dense(units = layer_sizes[1], 
                         activation = lrelu, input_shape = ncol(df),
@@ -55,6 +56,13 @@ autoencoder <- function(df, layer_sizes = c(128, 64, 16),
   for (i in seq_along(layer_sizes)) {
     print(sprintf("TRAINING LAYER %d", i))
     freeze_weights(model, from = "Encoder_1", to = "Decoder_1")
+    
+    model %>% compile(
+      loss = "mse",
+      optimizer = optimizer_adam(lr = pretrain_lr),
+      metrics = "mse"
+    )
+    
     unfreeze_weights(get_layer(model, name = sprintf("Encoder_%d", i)))
     unfreeze_weights(get_layer(model, name = sprintf("Decoder_%d", i)))
     
@@ -78,7 +86,7 @@ autoencoder <- function(df, layer_sizes = c(128, 64, 16),
   unfreeze_weights(model, from = "Encoder_1", to = "Decoder_1")
   model %>% compile(
     loss = "mse",
-    optimizer = optimizer_adam(lr = pretrain_lr),
+    optimizer = optimizer_adam(lr = finetune_lr),
     metrics = "mse"
   )
   
@@ -91,5 +99,3 @@ autoencoder <- function(df, layer_sizes = c(128, 64, 16),
   plot(history)
 }
 
-test_df <- read.table("filtered_met2_N-49_2019-06-06.txt", header=TRUE, row.names = "sid")
-autoencoder(test_df, c(10, 2))
