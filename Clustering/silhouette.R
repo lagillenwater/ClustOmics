@@ -3,28 +3,36 @@ dataset.path = 'iris.csv'
 clustering.path = 'clustering.csv'
 
 dataset = read.csv(dataset.path)
+col.names = colnames(dataset)
+col.names[1] = 'sid'
+colnames(dataset) = col.names
+
 clustering = read.csv(clustering.path)
 
-# get the unique labels
+# get the unique labes
 labels = unique(clustering[2])
 labels = as.vector(unlist(labels))
 labels = sort(labels, decreasing = FALSE)
 feature_count = length(dataset)
 
+# get centroids 
+centroids = get_centroids(dataset, clustering, labels)
+
 # for each cluster:
 for (label in labels)
 {
   # get list of points in that cluster
-  in.points.ids = dataset[clustering[2] == label,]
+  in.points = dataset[clustering[2] == label,]
   
-  # get list of other points (that are not the current cluster)
-  out.points.ids = dataset[clustering[2]!= label, ]
+  # get list of other points
+  out.points = dataset[clustering[2] != label, ]
   
-  # for each in point, compute inner and outer distances
-  for(point in in.points.ids)
+  
+  # for each in point, compute in and out distances
+  for(point in in.points)
   {
-    inner.distance = 0 # average distance to points in the current cluster
-    outer.distance =  rep(0, length(labels)) # min(average distance to other clusters)
+    inner.distance = 0
+    outer.distance = 0 # average distance to 
     
     for (in.index in 1:nrow(in.points))
     {
@@ -37,14 +45,15 @@ for (label in labels)
       ouder.distance = outer.distance / nrow(out.points)
     }
   }
+  
 }
 
-get.euclidean.distance <- function(vector1, vector2)
+get_euclidean_distance <- function(vector1, vector2)
 {
-  if (length(vector1)!=length(vector2))
+  if (length(vector1) != length(vector2))
     stop("different vector lengths")
   
-  distance = 0.0
+  distance = 0
   
   for (i in 1:length(vector1))
     distance = distance + (vector2[i]-vector1[i])**2
@@ -53,17 +62,23 @@ get.euclidean.distance <- function(vector1, vector2)
   return (sqrt(distance))
 }
 
-get.average.distance <- function(point, cluster.points, self.included=FALSE)
+# returns a matrix of centroids for the clusters
+get_centroids <- function(dataset, clustering, labels)
 {
-  distance = 0.0
-  for (i in nrow(cluster.points))
-    distance = distance + get.euclidean.distance(point, cluster.points[i,])
-  point.count = nrow(cluster.points)
-  
-  if (self.included)
-    point.count = point.count - 1
-  
-  return (distance / point.count)
-}
+  dimensions = ncol(dataset)
+  centroids = matrix(0L, nrow = 0, ncol = dimensions-1)
 
-get.outer.distance <- function
+  for (label in labels)
+  {
+    # get the sids of points in this cluster
+    sids = unlist(clustering[clustering[2] == 1,][1], use.names = FALSE)
+    #in.points = dataset[match(sids, dataset[1]), ]
+    in.points = subset(dataset, sid %in% sids)
+    
+    #compute average in each dimension
+    centroid = sapply(in.points[,2:dimensions], mean)
+    centroids <- rbind(centroids, centroid)
+  }
+  
+  return(centroids)
+}
