@@ -46,7 +46,7 @@ if plt_dims == 1:
     if args.plot_title is None:
         plt.title("Histogram of PC 1 for {}".format(args.data))
     else:
-        plt.tile(args.plot_title)
+        plt.title(args.plot_title)
 
 elif plt_dims == 2:
     plt.scatter(data_pca[:, 0], data_pca[:, 1], c=clusters)
@@ -55,25 +55,25 @@ elif plt_dims == 2:
     if args.plot_title is None:
         plt.title("Scatter Plot of {}".format(args.data))
     else:
-        plt.tile(args.plot_title)
+        plt.title(args.plot_title)
 
 if plt_dims == 3:
     from mpl_toolkits.mplot3d import Axes3D
-    fig = plt.figure()
+    fig = plt.figure(figsize=(15,15))
     ax = fig.add_subplot(111, projection='3d')
-    ax.scatter(data_pca[:, 0], data_pca[:, 1], data_pca[:, 2], c=clusters)
-    ax.set_xlabel("PC 1")
-    ax.set_ylabel("PC 2")
-    ax.set_zlabel("PC 3")
+    ax.scatter(data_pca[:, 0], data_pca[:, 1], data_pca[:, 2], c=clusters, cmap='jet', depthshade=False)
+    ax.set_xlabel("PC 1", fontsize=12)
+    ax.set_ylabel("PC 2", fontsize=12)
+    ax.set_zlabel("PC 3", fontsize=12)
     if args.plot_title is None:
         plt.title("3D Scatter Plot of {}".format(args.data))
     else:
-        plt.tile(args.plot_title)
+        plt.title(args.plot_title)
 
 font = {'family' : 'monospace',
         'weight' : 'bold',
         'size'   : 20}
 
 rc('font', **font)
-
+plt.tight_layout()
 plt.show()
