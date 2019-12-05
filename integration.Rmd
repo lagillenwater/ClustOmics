@@ -1,0 +1,43 @@
+---
+title: ClustOmics
+author: Evan Stene, Shahab Hel-mi, Lucas Gillenwater, Andrew Hill, Yonghua Zhuang
+date: "`r format(Sys.Date())`"
+output: html_document
+---
+# ClustOmics
+ClustOmics is an R package for implementing the entire pipeline reported in (citation)
+
+### Details
+* biocViews: "biocViews terms are “keywords” used to describe a given package. They are broadly divided into three categories, representing the type of packages present in the Bioconductor Project -
+
+    Software
+
+    Annotation Data
+
+    Experiment Data
+"
+* License
+* Dependencies
+
+* Vignette
+
+# Filtering
+
+# Dimension Reduction
+# Clustering
+# Clinical Association
+# Feature Selection
+
+
+
+
+
+
+
+
+
+
+
+
+
+
