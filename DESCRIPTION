@@ -1,0 +1,19 @@
+Package: ClustOmics
+Title: package for implementing R21 pipeline
+Version: 0.0.0.9000
+Authors@R: 
+    person(given = "First",
+           family = "Last",
+           role = c("aut", "cre"),
+           email = "first.last@example.com",
+           comment = c(ORCID = "YOUR-ORCID-ID"))
+Description: package for implementing R21 pipeline. 
+License: What license it uses
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.0.2.9000
+Imports:
+	e1071,	
+	openxlsx,
+	parallel,
+	varhandle

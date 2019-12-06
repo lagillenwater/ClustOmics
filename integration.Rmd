@@ -1,0 +1,166 @@
+---
+title: ClustOmics
+author: Evan Stene, Shahab Helmi, Lucas Gillenwater, Andrew Hill, Yonghua Zhuang
+date: "`r format(Sys.Date())`"
+output: html_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, results = "hide", message = FALSE, eval = FALSE, warning = FALSE)
+library(openxlsx)
+library(roxygen2)
+library(devtools)
+install("./ClustOmics")
+library(ClustOmics)
+
+```
+
+
+# ClustOmics
+ClustOmics is an R package for implementing the entire pipeline reported in (citation)
+
+#### NB - The following sections are required for submission to bioconductor
+
+### Installation
+### Documentation
+* tutorial
+* reference manual
+* News
+
+### Details
+* biocViews 
+	-"biocViews terms are “keywords” used to describe a given package. They are broadly divided into three categories, representing the type of packages present in the Bioconductor Project - Software, Annotation Data, Experiment Data"
+* License 
+* Dependencies
+* Vignette
+* Imports
+* LinkingTo
+* Suggests 
+* SystemRequirements
+* Enhances
+* URL
+* BugReports
+* Depends On Me
+* Imports Me
+* Suggests me
+* Links to Me
+
+### Package Archives
+* Source Package
+* Windows Binary
+* Mac OS X
+* Source Repository
+* Source Repository (Developer Access)
+* Package Short Url
+* Package Downloads Report
+* Old Source Packages for BioC 3.10
+
+# Data Input
+* Loading in necessary data
+* 12/5/2019 - Only loading in the proteomic data and important clinical variables
+
+
+```{r Data}
+###### This could be cleaned to be streamlined within the filter function
+##### Datasets
+clinical_file <- "/Bowler/home/gillenwaterl/COPDGene/Data/clinical/COPDGene_P1P2_All_Visit_29sep18.txt"
+clinical_variables_file <- "/Bowler/home/gillenwaterl/COPDGene/Data/clinical/P1P2_Pheno_w_QCT_DataDict_annotated_29sep18_important clinical variables_norace_gender_age.xlsx"
+protein_file <- "/Bowler/home/gillenwaterl/COPDGene/Data/somalogic/COPDGene_SOMA1300_P1P2_Sep18.txt"
+
+# All datasets should have SIDs as rownames and features 
+# All clinical data
+clinic <- read.delim(clinical_file)
+# # Important clinical variables
+imp <- read.xlsx(clinical_variables_file)
+# creating separate datasets for each phase without never smokers or those with exclusionary diseases
+clinic2 <- clinic[clinic$visitnum == 2 & clinic$smoking_status > 0 & clinic$ExclusionaryDisease == "",]
+rownames(clinic2) <- clinic2$sid
+clinic2 <- clinic2[,  names(clinic2) %in% imp$VariableName]
+
+
+
+### Somalogic
+prot <- read.delim(protein_file)
+prot <- prot[prot$Visitnum == 2,]
+rownames(prot) <- prot$SID
+prot <- prot[, 4:ncol(prot)]
+
+
+
+```
+
+# Filtering and adjustment
+* Purpose: 
+	- Data is adjusted for potential confounding factors (blood counts)
+	- The filtering function is a utility for reducing the feature set entering the dimension reduction function and removing "noisy" molecules. 
+	
+* Input: 
+	- Omic data that have been previously normalized and adjusted for potential batch effects. 
+	- Clinical data subsetted to only include interesting variables chosen by a clinician (Dr. Russell Bowler)
+
+* Processes performed: 
+	- Log transform the data
+	- Adjust for confounding variables (blood counts)
+	- Center and Scale (standardize)
+	- Filter based on associations with important clinical variabless
+
+* Output: 
+	- Filtered Dataset with SIDs as rows and features as columns
+	- Other visualizations? 
+
+
+```{r filtering and adjustment}
+# Log transform the data 
+prot <- log(prot)
+
+# Adjusting the data for potential confounders
+# vector of variables to adjust for
+vars <- c("hemoglobin", "neutrophl_pct", "lymphcyt_pct", "eosinphl_pct", "monocyt_pct")
+adjusted.data <- linear_adjust(prot, clinic2, vars)
+
+# Standardize data
+adjusted.data$standardized <- center_and_scale(adjusted.data$residuals)
+
+
+### This function filters based on non-parametric assoctions and still requires a great deal of computational power, thus the process has been parallelized (LG)
+
+cl <- makeCluster(18)
+clusterExport(cl, c("prot", "clinic2", "assoc_wrapper"), envir = .GlobalEnv)
+
+#clusterCall(cl, function() { source("/Bowler/home/gillenwaterl/soma_met_standardize/functions/omics_filtering_functions.R") })
+final2 <- parApply(cl, prot, 2, function(x) assoc_wrapper(x, clinic2))
+stopCluster(cl)
+
+write.table(final2, file = sprintf("/Bowler/home/gillenwaterl/soma_met_standardize/prot_noBMI_%s.txt",  
+  Sys.Date()), sep = "\t", row.names = TRUE)
+
+prot.filt <- prot[,names(prot) %in% rownames(final2) ]
+
+
+write.table(prot.filt, file = sprintf("./soma_met_standardize/prot_log_filtered_standardized_N-%s_features-%s_%s.txt",dim(prot.filt)[1],dim(prot.filt)[2], Sys.Date()))
+
+
+
+``` 
+
+
+# Dimension Reduction
+
+
+
+# Clustering
+# Clinical Association
+# Feature Selection
+
+
+
+
+
+
+
+
+
+
+
+
+
+
