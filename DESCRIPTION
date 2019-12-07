@@ -16,4 +16,6 @@ Imports:
 	e1071,	
 	openxlsx,
 	parallel,
-	varhandle
+	varhandle, 
+	data.table, 
+	keras

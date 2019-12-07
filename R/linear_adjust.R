@@ -19,11 +19,11 @@ linear_adjust <- function(dat,clin, vars) {
 	residTbl <- tbl[, 2:(ncol(dat)+1)]
 	
   	# Regression for each variable.
-   	for(coli in 2:(ncol(dat)+1)){
+   	for(coli in 2:ncol(dat)+1){
       model.text <- paste(sprintf("%s ~", names(tbl)[coli]) ,paste(vars,collapse=" + "),collapse=" ")
   	  model.form <- as.formula( model.text )
 	  regMod <- lm( model.form, data=tbl )
-      residTbl[,coli-1] <- resid(regMod);
+      residTbl[,coli] <- resid(regMod);
    }
 
    rownames(residTbl) <- tbl$Row.names

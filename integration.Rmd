@@ -105,6 +105,7 @@ prot <- prot[, 4:ncol(prot)]
 
 * Output: 
 	- Filtered Dataset with SIDs as rows and features as columns
+	- List of clinical features significantly (beyond set threshold) associated with each feature
 	- Other visualizations? 
 
 
@@ -120,23 +121,15 @@ adjusted.data <- linear_adjust(prot, clinic2, vars)
 # Standardize data
 adjusted.data$standardized <- center_and_scale(adjusted.data$residuals)
 
-
-### This function filters based on non-parametric assoctions and still requires a great deal of computational power, thus the process has been parallelized (LG)
-
-cl <- makeCluster(18)
-clusterExport(cl, c("prot", "clinic2", "assoc_wrapper"), envir = .GlobalEnv)
-
-#clusterCall(cl, function() { source("/Bowler/home/gillenwaterl/soma_met_standardize/functions/omics_filtering_functions.R") })
-final2 <- parApply(cl, prot, 2, function(x) assoc_wrapper(x, clinic2))
-stopCluster(cl)
-
-write.table(final2, file = sprintf("/Bowler/home/gillenwaterl/soma_met_standardize/prot_noBMI_%s.txt",  
-  Sys.Date()), sep = "\t", row.names = TRUE)
-
-prot.filt <- prot[,names(prot) %in% rownames(final2) ]
-
-
-write.table(prot.filt, file = sprintf("./soma_met_standardize/prot_log_filtered_standardized_N-%s_features-%s_%s.txt",dim(prot.filt)[1],dim(prot.filt)[2], Sys.Date()))
+# further remove the blood count variables (CBC) and BMI from filtering clincial variables
+adjusted.data$clinical_noCBC_noBMI <- adjusted.data$clinical[, !(names(adjusted.data$clinical) %in% c("wbc","lymphcyt","lymphcyt_pct", "neutrophl_pct", "neutrophl", "monocyt_pct",  "monocyt", "eosinphl_pct", "eosinphl", "hemoglobin", "hematocrit", "MCV", "MCH", "MCHC", "Platelets", "RBC", "basophl", "basophl_pct", "BMI")) ]
+# Filtered data- would be good to add output of features and their associations here (LG 12/6/19)
+filtered.data <- filter_function(dat = adjusted.data$standardized, 
+								clinical = adjusted.data$clinical_noCBC_noBMI, 
+								padjust = "fdr", 
+								sig_val = 5e-5,
+								filter_function = "non-parametric", 
+								parallel = TRUE,
 
 
 
@@ -144,7 +137,24 @@ write.table(prot.filt, file = sprintf("./soma_met_standardize/prot_log_filtered_
 
 
 # Dimension Reduction
+* Notes 
+	- need library keras
+	- need to install tensor flow. How to ensure that those using the package have it?
+	- 
 
+```{r autoencoder}
+
+install("./ClustOmics")
+library(ClustOmics)
+
+auto.data <- autoencoder(df = filtered.data$filtered, 
+						 layer_sizes = c(128, 64, 16), 
+                        pretrain_epochs = 100, finetune_epochs = 200,
+                        pretrain_lr = 0.01, finetune_lr = 0.00001,
+                        batch_size = 100, validation_split = 0.2,
+                        use_gpu = FALSE)
+
+```
 
 
 # Clustering
