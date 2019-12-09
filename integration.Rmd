@@ -1,5 +1,6 @@
 ---
 title: ClustOmics
+<<<<<<< HEAD
 author: Evan Stene, Shahab Hel-mi, Lucas Gillenwater, Andrew Hill, Yonghua Zhuang
 date: "`r format(Sys.Date())`"
 output: html_document
@@ -24,6 +25,166 @@ ClustOmics is an R package for implementing the entire pipeline reported in (cit
 # Filtering
 
 # Dimension Reduction
+=======
+author: Evan Stene, Shahab Helmi, Lucas Gillenwater, Andrew Hill, Yonghua Zhuang
+date: "`r format(Sys.Date())`"
+output: html_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, results = "hide", message = FALSE, eval = FALSE, warning = FALSE)
+library(openxlsx)
+library(roxygen2)
+library(devtools)
+install("./ClustOmics")
+library(ClustOmics)
+
+```
+
+
+# ClustOmics
+ClustOmics is an R package for implementing the entire pipeline reported in (citation)
+
+#### NB - The following sections are required for submission to bioconductor
+
+### Installation
+### Documentation
+* tutorial
+* reference manual
+* News
+
+### Details
+* biocViews 
+	-"biocViews terms are “keywords” used to describe a given package. They are broadly divided into three categories, representing the type of packages present in the Bioconductor Project - Software, Annotation Data, Experiment Data"
+* License 
+* Dependencies
+* Vignette
+* Imports
+* LinkingTo
+* Suggests 
+* SystemRequirements
+* Enhances
+* URL
+* BugReports
+* Depends On Me
+* Imports Me
+* Suggests me
+* Links to Me
+
+### Package Archives
+* Source Package
+* Windows Binary
+* Mac OS X
+* Source Repository
+* Source Repository (Developer Access)
+* Package Short Url
+* Package Downloads Report
+* Old Source Packages for BioC 3.10
+
+# Data Input
+* Loading in necessary data
+* 12/5/2019 - Only loading in the proteomic data and important clinical variables
+
+
+```{r Data}
+###### This could be cleaned to be streamlined within the filter function
+##### Datasets
+clinical_file <- "/Bowler/home/gillenwaterl/COPDGene/Data/clinical/COPDGene_P1P2_All_Visit_29sep18.txt"
+clinical_variables_file <- "/Bowler/home/gillenwaterl/COPDGene/Data/clinical/P1P2_Pheno_w_QCT_DataDict_annotated_29sep18_important clinical variables_norace_gender_age.xlsx"
+protein_file <- "/Bowler/home/gillenwaterl/COPDGene/Data/somalogic/COPDGene_SOMA1300_P1P2_Sep18.txt"
+
+# All datasets should have SIDs as rownames and features 
+# All clinical data
+clinic <- read.delim(clinical_file)
+# # Important clinical variables
+imp <- read.xlsx(clinical_variables_file)
+# creating separate datasets for each phase without never smokers or those with exclusionary diseases
+clinic2 <- clinic[clinic$visitnum == 2 & clinic$smoking_status > 0 & clinic$ExclusionaryDisease == "",]
+rownames(clinic2) <- clinic2$sid
+clinic2 <- clinic2[,  names(clinic2) %in% imp$VariableName]
+
+
+
+### Somalogic
+prot <- read.delim(protein_file)
+prot <- prot[prot$Visitnum == 2,]
+rownames(prot) <- prot$SID
+prot <- prot[, 4:ncol(prot)]
+
+
+
+```
+
+# Filtering and adjustment
+* Purpose: 
+	- Data is adjusted for potential confounding factors (blood counts)
+	- The filtering function is a utility for reducing the feature set entering the dimension reduction function and removing "noisy" molecules. 
+	
+* Input: 
+	- Omic data that have been previously normalized and adjusted for potential batch effects. 
+	- Clinical data subsetted to only include interesting variables chosen by a clinician (Dr. Russell Bowler)
+
+* Processes performed: 
+	- Log transform the data
+	- Adjust for confounding variables (blood counts)
+	- Center and Scale (standardize)
+	- Filter based on associations with important clinical variabless
+
+* Output: 
+	- Filtered Dataset with SIDs as rows and features as columns
+	- List of clinical features significantly (beyond set threshold) associated with each feature
+	- Other visualizations? 
+
+
+```{r filtering and adjustment}
+# Log transform the data 
+prot <- log(prot)
+
+# Adjusting the data for potential confounders
+# vector of variables to adjust for
+vars <- c("hemoglobin", "neutrophl_pct", "lymphcyt_pct", "eosinphl_pct", "monocyt_pct")
+adjusted.data <- linear_adjust(prot, clinic2, vars)
+
+# Standardize data
+adjusted.data$standardized <- center_and_scale(adjusted.data$residuals)
+
+# further remove the blood count variables (CBC) and BMI from filtering clincial variables
+adjusted.data$clinical_noCBC_noBMI <- adjusted.data$clinical[, !(names(adjusted.data$clinical) %in% c("wbc","lymphcyt","lymphcyt_pct", "neutrophl_pct", "neutrophl", "monocyt_pct",  "monocyt", "eosinphl_pct", "eosinphl", "hemoglobin", "hematocrit", "MCV", "MCH", "MCHC", "Platelets", "RBC", "basophl", "basophl_pct", "BMI")) ]
+# Filtered data- would be good to add output of features and their associations here (LG 12/6/19)
+filtered.data <- filter_data(dat = adjusted.data$standardized, 
+								clinical = adjusted.data$clinical_noCBC_noBMI, 
+								padjust = "fdr", 
+								sig_val = 5e-5,
+								filter_function = "non-parametric", 
+								parallel = TRUE,
+								cores = NULL)
+
+
+
+``` 
+
+
+# Dimension Reduction
+* Notes 
+	- need library keras
+	- need to install tensor flow. How to ensure that those using the package have it?
+	- 
+
+```{r autoencoder}
+
+install("./ClustOmics")
+library(ClustOmics)
+
+auto.data <- autoencoder(df = filtered.data$filtered, 
+						 layer_sizes = c(128, 64, 16), 
+                        pretrain_epochs = 100, finetune_epochs = 200,
+                        pretrain_lr = 0.01, finetune_lr = 0.00001,
+                        batch_size = 100, validation_split = 0.2,
+                        use_gpu = FALSE)
+
+```
+
+
+>>>>>>> new-rpackage
 # Clustering
 # Clinical Association
 # Feature Selection
