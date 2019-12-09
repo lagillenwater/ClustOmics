@@ -18,4 +18,5 @@ Imports:
 	parallel,
 	varhandle, 
 	data.table, 
-	keras
+	keras, 
+	mlr
