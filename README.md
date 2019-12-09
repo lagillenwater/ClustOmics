@@ -9,7 +9,7 @@ ClustOmics is an R package for implementing the entire pipeline reported in (cit
 if (!requireNamespace("devtools", quietly = TRUE))
     install.packages("devtools")
 
-#To install from a private repo, use auth_token with a token
+# To install from a private repo, use auth_token with a token
 # from https://github.com/settings/tokens. You only need the
 # repo scope. Best practice is to save your PAT in env var called
 # GITHUB_PAT.
