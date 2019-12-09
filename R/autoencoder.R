@@ -21,10 +21,10 @@ autoencoder <- function(df, layer_sizes = c(128, 64, 16),
 	if (use_gpu){
 	  install_keras(tensorflow = "gpu")
 	} else {
-	  # install_keras(tensorflow = "default")
+	   install_keras(method = "virtualenv", tensorflow = "1.5")
 	}
 
-	use_condaenv("r-tensorflow")
+	#use_condaenv("r-tensorflow")
   # Define model
   model <- keras_model_sequential()
   lrelu <- layer_activation_leaky_relu()

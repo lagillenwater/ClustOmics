@@ -124,12 +124,13 @@ adjusted.data$standardized <- center_and_scale(adjusted.data$residuals)
 # further remove the blood count variables (CBC) and BMI from filtering clincial variables
 adjusted.data$clinical_noCBC_noBMI <- adjusted.data$clinical[, !(names(adjusted.data$clinical) %in% c("wbc","lymphcyt","lymphcyt_pct", "neutrophl_pct", "neutrophl", "monocyt_pct",  "monocyt", "eosinphl_pct", "eosinphl", "hemoglobin", "hematocrit", "MCV", "MCH", "MCHC", "Platelets", "RBC", "basophl", "basophl_pct", "BMI")) ]
 # Filtered data- would be good to add output of features and their associations here (LG 12/6/19)
-filtered.data <- filter_function(dat = adjusted.data$standardized, 
+filtered.data <- filter_data(dat = adjusted.data$standardized, 
 								clinical = adjusted.data$clinical_noCBC_noBMI, 
 								padjust = "fdr", 
 								sig_val = 5e-5,
 								filter_function = "non-parametric", 
 								parallel = TRUE,
+								cores = NULL)
 
 
 
