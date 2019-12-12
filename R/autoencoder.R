@@ -1,4 +1,4 @@
-#' Regression adjustment funcion
+#' Autoencoder function
 #'
 #' This function adjusts features for effects of variables with linear regression
 #' @param df 
@@ -21,7 +21,8 @@ autoencoder <- function(df, layer_sizes = c(128, 64, 16),
 	if (use_gpu){
 	  install_keras(tensorflow = "gpu")
 	} else {
-	   install_keras(method = "virtualenv", tensorflow = "1.5")
+    if (!requireNamespace("keras", quietly = TRUE))
+	   install_keras(method = "virtualenv", tensorflow = "1.14")
 	}
 
 	#use_condaenv("r-tensorflow")
@@ -30,6 +31,10 @@ autoencoder <- function(df, layer_sizes = c(128, 64, 16),
   lrelu <- layer_activation_leaky_relu()
   
   # Define encoder layers
+  model %>% 
+    layer_dense(units = layer_sizes[1], input_shape = c(ncol(df)), name = sprintf("Encoder_%d", 1)) 
+
+
   model %>% layer_dense(units = layer_sizes[1], 
                         activation = lrelu, input_shape = ncol(df),
                         name = sprintf("Encoder_%d", 1))
