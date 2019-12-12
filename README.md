@@ -13,7 +13,7 @@ if (!requireNamespace("devtools", quietly = TRUE))
 # from https://github.com/settings/tokens. You only need the
 # repo scope. Best practice is to save your PAT in env var called
 # GITHUB_PAT.
-# EXAMPLE: install_github("hadley/private", auth_token = "abc")
+# EXAMPLE: Sys.setenv("GITHUB_PAT" = "abc")
 
 
 devtools::install_github(repo = "lagillenwater/ClustOmics",  force = TRUE )
