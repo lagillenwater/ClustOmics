@@ -1,6 +1,6 @@
 ---
 title: ClustOmics
-author: Evan Stene, Shahab Helmi, Lucas Gillenwater, Andrew Hill, Yonghua Zhuang
+author: Evan Stene, Shahab Helmi, Lucas Gillenwater, Andrew Hill, Yonghua Zhuang, Gayani Gupta
 date: "`r format(Sys.Date())`"
 output: html_document
 ---
