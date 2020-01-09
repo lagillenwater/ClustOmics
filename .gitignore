@@ -1,0 +1,4 @@
+*.txt
+*.csv
+inst/AE
+R/.Rhistory

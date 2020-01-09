@@ -1,127 +1,143 @@
+library(reticulate)
+
 #' Autoencoder function
 #'
-#' This function adjusts features for effects of variables with linear regression
-#' @param df 
+#' Reduce dimensionality using an Autoencoder
+#' @param df dataframe to be reduced
+#' @param layer.sizes
+#' @param record.type ["csv", "npy", "npz", "tfrecord"] type of record format used for feeding autoencoder
 #' @return 
 #' @export
 
-
-
-
-autoencoder <- function(df, layer_sizes = c(128, 64, 16), 
-                        pretrain_epochs = 100, finetune_epochs = 200,
-                        pretrain_lr = 0.01, finetune_lr = 0.00001,
-                        batch_size = 100, validation_split = 0.2,
-                        use_gpu = FALSE ){
-	  # Installation parameters
-	library(keras)
-
-	# Model hyperparameters
-
-	if (use_gpu){
-	  install_keras(tensorflow = "gpu")
-	} else {
-    if (!requireNamespace("keras", quietly = TRUE))
-	   install_keras(method = "virtualenv", tensorflow = "1.14")
-	}
-
-	#use_condaenv("r-tensorflow")
-  # Define model
-  model <- keras_model_sequential()
-  lrelu <- layer_activation_leaky_relu()
+autoencoder <- function(df, layer.sizes = c(128, 64, 16), 
+                        pretrain.epochs = 100, finetune.epochs = 200,
+                        pretrain.lr = 0.01, batch.size = 32, validation.split = 0.2,
+                        use.gpu = FALSE, record.type = "tfrecord"){
+  wd <- getwd()
+  setwd("../inst/AE")
   
-  # Define encoder layers
-  model %>% 
-    layer_dense(units = layer_sizes[1], input_shape = c(ncol(df)), name = sprintf("Encoder_%d", 1)) 
-
-
-  model %>% layer_dense(units = layer_sizes[1], 
-                        activation = lrelu, input_shape = ncol(df),
-                        name = sprintf("Encoder_%d", 1))
-  if (length(layer_sizes) > 1){
-    encoder_no <- 2
-    for (size in layer_sizes[(2:length(layer_sizes))]){
-      model %>% layer_dense(units = size, activation = lrelu, 
-                            name = sprintf("Encoder_%d", encoder_no))
-      encoder_no <- encoder_no + 1
-    }
-    
-    # Define decoder layers
-    decoder_no <- length(layer_sizes)
-    for (size in rev(layer_sizes[(1:length(layer_sizes) - 1)])){
-      model %>% layer_dense(units = size, activation = "linear", 
-                            name = sprintf("Decoder_%d", decoder_no))
-      decoder_no <- decoder_no - 1
-    }
+  # TODO: Put in try catch to set wd even in event of failure
+  converter.path <- sprintf("%scsv2tfrecord.py", "data/")
+  record.converter <- source_python(converter.path)
+  
+  write.csv(df, file="data/tmp_out.csv")
+  #reticulate::import("data/csv2tfrecord")
+  if (record.type == "tfrecord"){
+    reticulate::py_call(csv2tfrecord, file_pattern="tmp_out.csv")
   }
-  model %>% layer_dense(units = ncol(df), activation = "linear",
-                        name = sprintf("Decoder_%d", 1))
+	file.remove("data/tmp_out.csv")
+	
+	#setwd("model/")
   
-  summary(model)
-  
-  # Compile model with MSE loss
-  model %>% compile(
-    loss = "mse",
-    optimizer = optimizer_adam(lr = pretrain_lr),
-    metrics = "mse"
-  )
-  
-  name_temp <- row.names(df)
-  X = as.matrix(df)
-  
-  # Pretrain model layers
-  for (i in seq_along(layer_sizes)) {
-    print(sprintf("TRAINING LAYER %d", i))
-    freeze_weights(model, from = "Encoder_1", to = "Decoder_1")
-    
-    model %>% compile(
-      loss = "mse",
-      optimizer = optimizer_adam(lr = pretrain_lr),
-      metrics = "mse"
-    )
-    
-    unfreeze_weights(get_layer(model, name = sprintf("Encoder_%d", i)))
-    unfreeze_weights(get_layer(model, name = sprintf("Decoder_%d", i)))
-    
-    model %>% compile(
-      loss = "mse",
-      optimizer = optimizer_adam(lr = pretrain_lr),
-      metrics = "mse"
-    )
-    
-    history <- model %>% fit(
-      X, X, 
-      epochs = pretrain_epochs, batch_size = batch_size, 
-      validation_split = validation_split
-    )
-    
-    plot(history)
+  cmd.builder <- sprintf("python %s", "model/deepomicmodel.py")
+  cmd.builder <- paste(cmd.builder, sprintf("--layers %i", layer.sizes[1]), sep=" ")
+  for (layer in layer.sizes[2:length(layer.sizes)]){
+    cmd.builder <- paste(cmd.builder, sprintf(",%i", pretrain.epochs), sep="")
   }
+  cmd.builder <- paste(cmd.builder, sprintf("--num_epochs %i", pretrain.epochs), sep=" ")
+  cmd.builder <- paste(cmd.builder, sprintf("--num_comb_epochs %i", finetune.epochs), sep=" ")
+  cmd.builder <- paste(cmd.builder, sprintf("--learn_rate %f", pretrain.lr), sep=" ")
+  cmd.builder <- paste(cmd.builder, sprintf("--batch_size %i", batch.size), sep=" ")
+  cmd.builder <- paste(cmd.builder, "--no_timestamp", sep=" ")
+  system(cmd.builder)
   
-  # Finetune entire model
-  print("TRAINING ALL LAYERS IN COMBINATION ")
-  unfreeze_weights(model, from = "Encoder_1", to = "Decoder_1")
-  model %>% compile(
-    loss = "mse",
-    optimizer = optimizer_adam(lr = finetune_lr),
-    metrics = "mse"
-  )
+  out_df <- read.csv("ae_out.csv")
   
-  history <- model %>% fit(
-    X, X, 
-    epochs = pretrain_epochs, batch_size = batch_size, 
-    validation_split = validation_split
-  )
+  setwd(wd)
   
-  plot(history)
-  
-  embeddings <- model %>% predict(X)
-  
-  out_df <- as.data.frame(embeddings)
-  row.names(out_df) <- name_temp
   return(out_df)
 }
 
+#' Check Dependency function
+#'
+#' Check for all dependencies required by the autoencoder. Optionally, enable
+#' installation of missing dependencies.
+#' @param py.path path to preferred Python installation or environment (defaults to system install)
+#' @param py.env ["python", "virtualenv", "conda"] type of python environment to run, defaults to standard python
+#' @return TRUE if all required installations detected, FALSE otherwise
+#' @export
 
+check_dependencies <- function(py.path, py.env="python") {
+  ae.installed <- F
+  python.version <- 0
+  tensorflow.version <- 0
+  tf.gpu <- F
 
+  # Check for Autoencoder installation
+  # TODO: check for installation
+  if (file.exists("../inst/AE")){
+    print("Autoencoder found!")
+  } else {
+    cmd <- readline("This functionality requires installing an outside package from GitHub 
+          (url: https://github.com/eastene/DeepOmic), continue [y/n]?")
+    if (cmd == "y"){
+      git2r::clone(url="https://github.com/eastene/DeepOmic.git", local_path = "../inst/AE/")
+    }
+  }
+  
+  switch(py.env,
+    "python" = use_python(py.path, required = TRUE),
+    "virtualenv" = use_virtualenv(py.path, required = TRUE),
+    "conda" = use_condaenv(py.path, required = TRUE),
+    stop(sprintf("Python executable or environment not found at: %s", py.path))
+  )
+  
+  py.config <- py_config()
 
+  # Check Python version
+  if (py.config$version[1] == 2 || !py_available()){
+    # Python version is less than 3.0 or none detected
+    cmd <- readline("No exsiting installation of Python 3 detected, install now [y/n]?")
+    if (cmd == "y"){
+      stop("Function not implemented yet")
+    }
+    
+  } else {
+    print("Supported Python installation found!")
+  }
+  
+  # Check TF version
+  tf_import <- tryCatch(
+    {
+      import("tensorflow")
+      print("Supported Tensorflow install found!")
+    },
+    # TF not installed
+    error = function(cond) {
+      cmd <- readline("No existing intallation of Tensorflow detected, install now [y/n]?")
+      if (cmd == "y"){
+        gpu <- readline("Install for GPU usage? (NOTE: requires CUDA and CUDNN install and one or more GPUs!) [y/n]?")
+        if (gpu == "y"){
+          py_install("tensorflow-gpu")
+        } else {
+          py_install("tensorflow")
+        }
+      } else{
+          stop("Tensorflow installation not found. Autoencoder unavailable.")
+      }
+      return(NA)
+    }
+  )
+  
+  required.packages <- c("pandas", "matplotlib")
+  imported.packages <- c("")
+  misc_import <- tryCatch(
+    {
+      tmp.packages <- required.packages
+      for (package in tmp.packages){
+        import(package)
+        required.packages <- required.packages[2:length(required.packages)]
+      }
+    },
+    error = function(cond){
+      print("One or more python packages not found")
+      print("Packages not imported: (note: some may already be installed, see error message for more detail)")
+      for (package in required.packages){
+        print(package)
+      }
+      stop(cond)
+    }
+  )
+  
+  print("Autoencoder is available for use (see ?autoencoder for help)")
+}
