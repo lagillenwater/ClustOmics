@@ -14,22 +14,28 @@ autoencoder <- function(df, layer.sizes = c(128, 64, 16),
                         pretrain.lr = 0.01, batch.size = 32, validation.split = 0.2,
                         use.gpu = FALSE, record.type = "tfrecord"){
   wd <- getwd()
+  # TODO: prompt users for any system changes (can interfere with concurrently running python/R scripts)
   setwd("../inst/AE")
+  pypath = Sys.getenv("PYTHONPATH")
+  Sys.setenv(PYTHONPATH="C:/Users/easte/Documents/GitHub/ClustOmics/inst/AE")
   
   # TODO: Put in try catch to set wd even in event of failure
   converter.path <- sprintf("%scsv2tfrecord.py", "data/")
   record.converter <- source_python(converter.path)
   
-  write.csv(df, file="data/tmp_out.csv")
+  write.table(df, file="data/tmp_out.csv", sep = "\t")
   #reticulate::import("data/csv2tfrecord")
-  if (record.type == "tfrecord"){
-    reticulate::py_call(csv2tfrecord, file_pattern="tmp_out.csv")
-  }
+  # TODO: add support for other file types
+  #if (record.type == "tfrecord"){
+  csv2tfrecord(file_pattern="tmp_out.csv", data_dir="data")
+  #}
 	file.remove("data/tmp_out.csv")
 	
 	#setwd("model/")
   
   cmd.builder <- sprintf("python %s", "model/deepomicmodel.py")
+  cmd.builder <- paste(cmd.builder, sprintf("--data_dir %s", "data"), sep=" ")
+  cmd.builder <- paste(cmd.builder, sprintf("--input_dims %i", ncol(df)), sep=" ")
   cmd.builder <- paste(cmd.builder, sprintf("--layers %i", layer.sizes[1]), sep=" ")
   for (layer in layer.sizes[2:length(layer.sizes)]){
     cmd.builder <- paste(cmd.builder, sprintf(",%i", pretrain.epochs), sep="")
@@ -44,6 +50,7 @@ autoencoder <- function(df, layer.sizes = c(128, 64, 16),
   out_df <- read.csv("ae_out.csv")
   
   setwd(wd)
+  Sys.setenv(PYTHONPATH=pypath)
   
   return(out_df)
 }
