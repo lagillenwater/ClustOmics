@@ -23,7 +23,7 @@ autoencoder <- function(df, layer.sizes = c(128, 64, 16),
   converter.path <- sprintf("%scsv2tfrecord.py", "data/")
   record.converter <- source_python(converter.path)
   
-  write.table(df, file="data/tmp_out.csv", sep = "\t")
+  write.csv(df, file="data/tmp_out.csv")
   #reticulate::import("data/csv2tfrecord")
   # TODO: add support for other file types
   #if (record.type == "tfrecord"){
