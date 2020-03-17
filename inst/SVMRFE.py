@@ -45,10 +45,9 @@ def label_soma(cols, anno_file="Soma-ProteinNames.xlsx", names_col="TargetFullNa
 def SVMRFE_PY(df, labels, save_full_ranks=True, annotate=False, plot_cv_score=True):
 
 	feature_rank_file = "Feature_Ranks.csv"
-	top_feature_file = "Top_Features_Sorted.csv"
 
 	X, y = df.align(labels, join='inner', axis=0)
-	y = np.reshape(y, (-1, ))
+	y = np.reshape(y, (-1, 1))
 
 	if annotate:
 		X.columns = label_soma(X.columns)
@@ -73,7 +72,8 @@ def SVMRFE_PY(df, labels, save_full_ranks=True, annotate=False, plot_cv_score=Tr
 		labs = X.columns.values
 		df = pd.DataFrame(labs, columns=["Column"])
 		svc.fit(X, y) # fit svc to get coefs of all feats
-		df["(Overall)coef^2"] = np.square(svc.coef_.T)
+		for cs in range(len(svc.coef_)):
+			df["coef^2_Class{}".format(cs+1)] = np.square(svc.coef_[cs, :])
 		df["ranks"] = rfe.ranking_
 		df["support"] = rfe.get_support()
 		ranks = df.sort_values(["ranks"])
@@ -91,6 +91,6 @@ def SVMRFE_PY(df, labels, save_full_ranks=True, annotate=False, plot_cv_score=Tr
 
 # %%
 if __name__ == "__main__":
-	data = pd.read_csv("soma_filtered_test.csv", low_memory=False, delimiter=',', index_col=[0])
-	clus = pd.read_csv("soma2_2019-11-23_AE08_k=11.csv", low_memory=False, delimiter=',', index_col=[0])	
+	data = pd.read_csv("rna2_filter_nodems_noBMI_bloodAdj_N-2637_1798-features_2019-11-25.txt", low_memory=False, delimiter='\t', index_col=[0])
+	clus = pd.read_csv("rna2_UPDATED_2019-11-25_AE08_k=4.csv", low_memory=False, delimiter=',', index_col=[0])	
 	SVMRFE_PY(data, clus)
