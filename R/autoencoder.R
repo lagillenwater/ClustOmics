@@ -39,7 +39,7 @@ autoencoder <- function(df, hidden.layer.sizes = c(128, 64), embeddings.length =
   cmd.builder <- paste(cmd.builder, sprintf("--input_dims %i", ncol(df)), sep=" ")
   cmd.builder <- paste(cmd.builder, sprintf("--layers %i", layer.sizes[1]), sep=" ")
   for (layer in layer.sizes[2:length(layer.sizes)]){
-    cmd.builder <- paste(cmd.builder, sprintf(",%i", pretrain.epochs), sep="")
+    cmd.builder <- paste(cmd.builder, sprintf(",%i", layer), sep="")
   }
   cmd.builder <- paste(cmd.builder, sprintf("--num_epochs %i", pretrain.epochs), sep=" ")
   cmd.builder <- paste(cmd.builder, sprintf("--num_comb_epochs %i", finetune.epochs), sep=" ")
