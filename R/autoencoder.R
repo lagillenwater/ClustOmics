@@ -9,10 +9,11 @@ library(reticulate)
 #' @return 
 #' @export
 
-autoencoder <- function(df, layer.sizes = c(128, 64, 16), 
+autoencoder <- function(df, hidden.layer.sizes = c(128, 64), embeddings.length = 16, 
                         pretrain.epochs = 100, finetune.epochs = 200,
                         pretrain.lr = 0.01, batch.size = 32, validation.split = 0.2,
                         use.gpu = FALSE, record.type = "tfrecord"){
+  layer.sizes <- c(hidden.layer.sizes, embeddings.length)
   wd <- getwd()
   # TODO: prompt users for any system changes (can interfere with concurrently running python/R scripts)
   setwd("../inst/AE")
