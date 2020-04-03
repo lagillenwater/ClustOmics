@@ -9,15 +9,16 @@ library(reticulate)
 #' @return 
 #' @export
 
-autoencoder <- function(df, layer.sizes = c(128, 64, 16), 
+autoencoder <- function(df, hidden.layer.sizes = c(128, 64), embeddings.length = 16, 
                         pretrain.epochs = 100, finetune.epochs = 200,
                         pretrain.lr = 0.01, batch.size = 32, validation.split = 0.2,
                         use.gpu = FALSE, record.type = "tfrecord"){
+  layer.sizes <- c(hidden.layer.sizes, embeddings.length)
   wd <- getwd()
   # TODO: prompt users for any system changes (can interfere with concurrently running python/R scripts)
   setwd("../inst/AE")
   pypath = Sys.getenv("PYTHONPATH")
-  Sys.setenv(PYTHONPATH="C:/Users/easte/Documents/GitHub/ClustOmics/inst/AE")
+  Sys.setenv(PYTHONPATH=normalizePath("../inst/AE/"))
   
   # TODO: Put in try catch to set wd even in event of failure
   converter.path <- sprintf("%scsv2tfrecord.py", "data/")
@@ -38,7 +39,7 @@ autoencoder <- function(df, layer.sizes = c(128, 64, 16),
   cmd.builder <- paste(cmd.builder, sprintf("--input_dims %i", ncol(df)), sep=" ")
   cmd.builder <- paste(cmd.builder, sprintf("--layers %i", layer.sizes[1]), sep=" ")
   for (layer in layer.sizes[2:length(layer.sizes)]){
-    cmd.builder <- paste(cmd.builder, sprintf(",%i", pretrain.epochs), sep="")
+    cmd.builder <- paste(cmd.builder, sprintf(",%i", layer), sep="")
   }
   cmd.builder <- paste(cmd.builder, sprintf("--num_epochs %i", pretrain.epochs), sep=" ")
   cmd.builder <- paste(cmd.builder, sprintf("--num_comb_epochs %i", finetune.epochs), sep=" ")
@@ -48,11 +49,21 @@ autoencoder <- function(df, layer.sizes = c(128, 64, 16),
   system(cmd.builder)
   
   out_df <- read.csv("ae_out.csv")
+  file.remove("data/tmp_out.tfrecord")
+  file.remove("ae_out.csv")
   
   setwd(wd)
   Sys.setenv(PYTHONPATH=pypath)
   
   return(out_df)
+}
+
+autoencoder.reset <- function(){
+  checkpoints.path = normalizePath("../inst/AE/model/tmp/")
+  checkpoints = dir(checkpoints.path, "*")
+  for (c in checkpoints){
+    unlink(paste0(checkpoints.path, c), recursive=T)
+  }
 }
 
 #' Check Dependency function
@@ -64,7 +75,7 @@ autoencoder <- function(df, layer.sizes = c(128, 64, 16),
 #' @return TRUE if all required installations detected, FALSE otherwise
 #' @export
 
-check_dependencies <- function(py.path, py.env="python") {
+bootstrap <- function(py.path, py.env="conda") {
   ae.installed <- F
   python.version <- 0
   tensorflow.version <- 0
@@ -79,29 +90,36 @@ check_dependencies <- function(py.path, py.env="python") {
           (url: https://github.com/eastene/DeepOmic), continue [y/n]?")
     if (cmd == "y"){
       git2r::clone(url="https://github.com/eastene/DeepOmic.git", local_path = "../inst/AE/")
+    } else {
+      stop("Autoencoder unavailable, stopping.")
     }
   }
   
-  switch(py.env,
-    "python" = use_python(py.path, required = TRUE),
-    "virtualenv" = use_virtualenv(py.path, required = TRUE),
-    "conda" = use_condaenv(py.path, required = TRUE),
-    stop(sprintf("Python executable or environment not found at: %s", py.path))
-  )
-  
-  py.config <- py_config()
-
-  # Check Python version
-  if (py.config$version[1] == 2 || !py_available()){
-    # Python version is less than 3.0 or none detected
-    cmd <- readline("No exsiting installation of Python 3 detected, install now [y/n]?")
-    if (cmd == "y"){
-      stop("Function not implemented yet")
-    }
-    
-  } else {
-    print("Supported Python installation found!")
-  }
+  py.status <- tryCatch(
+    {
+      switch(py.env,
+             "python" = use_python(py.path, required = TRUE),
+             "virtualenv" = use_virtualenv(py.path, required = TRUE),
+             "conda" = use_condaenv(py.path, required = TRUE),
+             stop(sprintf("Python executable or environment not found at: %s", py.path)))
+      
+      # Check Python version
+      py.config <- py_config()
+      if (py.config$version[1] == 2 || !py_available()){
+        stop(sprintf("No exsiting installation of Python 3 detected at: %s", py.path))
+      }
+    },
+    # Python not found
+    error = function(cond){
+      cmd <- readline("Existing Python install not found, install Miniconda and proceed [y/n]?")
+      if (cmd == "y"){
+        reticulate::install_miniconda(path=miniconda_path())
+        use_condaenv(miniconda_path(), required = TRUE)
+      } else {
+        stop("No viable Python 3 available, stopping.")
+      }
+    })
+  print("Supported Python installation found!")
   
   # Check TF version
   tf_import <- tryCatch(
@@ -115,18 +133,18 @@ check_dependencies <- function(py.path, py.env="python") {
       if (cmd == "y"){
         gpu <- readline("Install for GPU usage? (NOTE: requires CUDA and CUDNN install and one or more GPUs!) [y/n]?")
         if (gpu == "y"){
-          py_install("tensorflow-gpu")
+          py_install("tensorflow-gpu==1.15")
         } else {
-          py_install("tensorflow")
+          py_install("tensorflow==1.15")
         }
       } else{
-          stop("Tensorflow installation not found. Autoencoder unavailable.")
+          stop("Tensorflow installation not found, stopping.")
       }
       return(NA)
     }
   )
   
-  required.packages <- c("pandas", "matplotlib")
+  required.packages <- c("pandas", "matplotlib", "sklearn")
   imported.packages <- c("")
   misc_import <- tryCatch(
     {
