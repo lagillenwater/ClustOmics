@@ -51,10 +51,10 @@ def SVMRFE_PY(df, labels, save_full_ranks=True, annotate=False, plot_cv_score=Tr
 
 	if annotate:
 		X.columns = label_soma(X.columns)
-
+		
 	print("Beginning Training:")
 	svc = LinearSVC(max_iter=8000)
-	rfe = RFECV(estimator=svc, step=1, verbose=0, cv=StratifiedKFold(3), scoring="accuracy", n_jobs=-1)
+	rfe = RFECV(estimator=svc, step=1, verbose=1, cv=StratifiedKFold(3), scoring="accuracy", n_jobs=-1)
 	rfe.fit(X, y)
 	print("Training Complete")
 
@@ -76,6 +76,7 @@ def SVMRFE_PY(df, labels, save_full_ranks=True, annotate=False, plot_cv_score=Tr
 			df["coef^2_Class{}".format(cs+1)] = np.square(svc.coef_[cs, :])
 		df["ranks"] = rfe.ranking_
 		df["support"] = rfe.get_support()
+		df["cummulative score"] = rfe.grid_scores_
 		ranks = df.sort_values(["ranks"])
 		ranks.to_csv(feature_rank_file)
 		print("Feature rankings written to: {}".format(feature_rank_file))
@@ -91,6 +92,6 @@ def SVMRFE_PY(df, labels, save_full_ranks=True, annotate=False, plot_cv_score=Tr
 
 # %%
 if __name__ == "__main__":
-	data = pd.read_csv("rna2_filter_nodems_noBMI_bloodAdj_N-2637_1798-features_2019-11-25.txt", low_memory=False, delimiter='\t', index_col=[0])
-	clus = pd.read_csv("rna2_UPDATED_2019-11-25_AE08_k=4.csv", low_memory=False, delimiter=',', index_col=[0])	
+	data = pd.read_csv("rna.csv", low_memory=False, delimiter=',', index_col=[0])
+	clus = pd.read_csv("w=13.34.csv", low_memory=False, delimiter=',', index_col=[0])	
 	SVMRFE_PY(data, clus)
