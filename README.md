@@ -1,4 +1,4 @@
-# ClustOmics V1.0
+# ClusterOmics V1.0
 ClustOmics is ...
 
 
